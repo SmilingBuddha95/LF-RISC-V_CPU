@@ -42,6 +42,8 @@
 \TLV
 
    $reset = *reset;
+   $next_pc[31:0] = $reset ? 32'b0 : $pc + 1;
+   $pc[31:0] = >>1$next_pc;
 
 
    // YOUR CODE HERE
