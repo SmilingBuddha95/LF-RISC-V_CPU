@@ -91,7 +91,9 @@
                 $is_b_instr ? { {20{$instr[31]}}, $instr[30:25], $instr[11:8], $instr[7], 1'b0 } :
                 $is_u_instr ? { $instr[31], $instr[30:20], $instr[19:12], 12'b0 } :
                 $is_j_instr ? { {12{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:25], $instr[24:21], 1'b0 } :
-                                                                                                           32'b0;
+                                                                                                             32'b0;
+
+   //INSTRUCTION PNEMONICS
    $dec_bits[10:0] = {$instr[30],$funct3,$opcode};
 
    $is_beq = $dec_bits ==? 11'bx_000_1100011;
@@ -102,8 +104,10 @@
    $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
    $is_addi = $dec_bits ==? 11'bx_000_0010011;
    $is_add = $dec_bits ==? 11'b0_000_0110011;
+
    `BOGUS_USE($imm $is_add $is_addi $is_bgeu $is_bltu
               $is_bge $is_blt $is_bne $is_beq);
+
 
 
 
@@ -111,7 +115,7 @@
    *passed = 1'b0;
    *failed = *cyc_cnt > M4_MAX_CYC;
 
-   //m4+rf(32, 32, $reset, $wr_en, $wr_index[4:0], $wr_data[31:0], $rd1_en, $rd1_index[4:0], $rd1_data, $rd2_en, $rd2_index[4:0], $rd2_data)
+   m4+rf(32, 32, $reset, $wr_en, $wr_index[4:0], $wr_data[31:0], $rd1_en, $rd1_index[4:0], $rd1_data, $rd2_en, $rd2_index[4:0], $rd2_data)
    //m4+dmem(32, 32, $reset, $addr[4:0], $wr_en, $wr_data[31:0], $rd_en, $rd_data)
    m4+cpu_viz()
 \SV
