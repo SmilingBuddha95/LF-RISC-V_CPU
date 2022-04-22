@@ -5,8 +5,6 @@
    m4_include_lib(['https://raw.githubusercontent.com/stevehoover/warp-v_includes/1d1023ccf8e7b0a8cf8e8fc4f0a823ebb61008e3/risc-v_defs.tlv'])
    m4_include_lib(['https://raw.githubusercontent.com/stevehoover/LF-Building-a-RISC-V-CPU-Core/main/lib/risc-v_shell_lib.tlv'])
 
-
-
    //---------------------------------------------------------------------------------
    // /====================\
    // | Sum 1 to 9 Program |
@@ -34,8 +32,6 @@
    m4_define(['M4_MAX_CYC'], 50)
    //---------------------------------------------------------------------------------
 
-
-
 \SV
    m4_makerchip_module   // (Expanded in Nav-TLV pane.)
    /* verilator lint_on WIDTH */
@@ -45,7 +41,9 @@
    $reset = *reset;
 
    //PC LOGIC
-   $next_pc[31:0] = $reset ? 32'b0 : $pc + 1;
+   $next_pc[31:0] = $reset ? 32'b0 :
+                    $taken_br ? $br_tgt_pc :
+                                   $pc + 32'd4;
    $pc[31:0] = >>1$next_pc;
 
    //INSTRUCTION MEMORY MACRO
@@ -53,19 +51,14 @@
 
    //DECODE LOGIC (THINK DMUX)
    $is_u_instr = $instr[6:2] ==? 5'b0x101;
-
    $is_s_instr = $instr[6:2] ==? 5'b0100x;
-
    $is_i_instr = $instr[6:2] ==? 5'b0000x ||
                   $instr[6:2] ==? 5'b001x0 ||
                   $instr[6:2] == 5'b11001;
-
    $is_r_instr = $instr[6:2] == 5'b01011 ||
                  $instr[6:2] ==? 5'b011x0 ||
                  $instr[6:2] == 5'b10100;
-
    $is_j_instr = $instr[6:2] == 5'b11011;
-
    $is_b_instr = $instr[6:2] == 5'b11000;
 
    $opcode[6:0] = $instr[6:0];
@@ -82,17 +75,14 @@
    $rs2_valid = $is_r_instr || $is_s_instr ||
                 $is_b_instr;
    $imm_valid = $is_u_instr || $is_i_instr ||
-                   $is_s_instr || $is_b_instr || $is_j_instr;
-   `BOGUS_USE($rd $rd_valid $rs1 $rs1_valid $opcode $imm_valid
-              $funct3 $funct3_valid $rs2 $rs2_valid);
+                $is_s_instr || $is_b_instr || $is_j_instr;
 
    $imm[31:0] = $is_i_instr ? { {21{$instr[31]}}, $instr[30:20] } :
-                $is_s_instr ? { {21{$instr[31]}}, $instr[30:25], $instr[11:8], $instr[7]} :
-                $is_b_instr ? { {20{$instr[31]}}, $instr[30:25], $instr[11:8], $instr[7], 1'b0 } :
-                $is_u_instr ? { $instr[31], $instr[30:20], $instr[19:12], 12'b0 } :
-                $is_j_instr ? { {12{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:25], $instr[24:21], 1'b0 } :
-                                                                                                             32'b0;
-
+                $is_s_instr ? { {21{$instr[31]}}, $instr[30:25], $instr[11:7]} :
+                $is_b_instr ? { {20{$instr[31]}}, $instr[7], $instr[30:25], $instr[11:8], 1'b0 } :
+                $is_u_instr ? { $instr[31:12], 12'b0 } :
+                $is_j_instr ? { {12{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:21], 1'b0 } :
+                                                                                              32'b0;
    //INSTRUCTION PNEMONICS
    $dec_bits[10:0] = {$instr[30],$funct3,$opcode};
 
@@ -105,14 +95,19 @@
    $is_addi = $dec_bits ==? 11'bx_000_0010011;
    $is_add = $dec_bits ==? 11'b0_000_0110011;
 
-   `BOGUS_USE($imm $is_add $is_addi $is_bgeu $is_bltu
-              $is_bge $is_blt $is_bne $is_beq);
-
    //ALU
    $result[31:0] = $is_addi ? $src1_value[31:0] + $imm :
                    $is_add ? $src1_value[31:0] + $src2_value[31:0] :
                                                               32'b0;
-
+   //BRANCH LOGIC
+   $taken_br = $is_beq ? $src1_value == $src2_value :
+               $is_bne ? $src1_value !=$src2_value :
+               $is_blt ? ($src1_value < $src2_value) ^ ($src1_value[31] != $src2_value[31]) :
+               $is_bge ? ($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31]) :
+               $is_bltu ? $src1_value < $src2_value :
+               $is_bgeu ? $src1_value >= $src2_value:
+                                                 1'b0;
+   $br_tgt_pc[31:0] = $pc + $imm;
 
    // Assert these to end simulation (before Makerchip cycle limit).
    *passed = 1'b0;
@@ -120,6 +115,7 @@
 
    //REGISTER FILE READ/WRITE MACRO, SPECIFIES READ AND WRITE SIGNALS
    m4+rf(32, 32, $reset, $rd_valid&&($rd!=5'b0), $rd, $result, $rs1_valid, $rs1, $src1_value, $rs2_valid, $rs2, $src2_value)
+   //m4+rf(32, 32, $reset, $wr_en, $wr_index[4:0], $wr_data[31:0], $rd1_en, $rd1_index[4:0], $rd1_data, $rd2_en, $rd2_index[4:0], $rd2_data)
    //m4+dmem(32, 32, $reset, $addr[4:0], $wr_en, $wr_data[31:0], $rd_en, $rd_data)
    m4+cpu_viz()
 \SV
