@@ -20,6 +20,8 @@
    //PC LOGIC
    $next_pc[31:0] = $reset ? 32'b0 :
                     $taken_br ? $br_tgt_pc :
+                    $is_jal ? $br_tgt_pc :
+                    $is_jalr ? $jalr_tgt_pc :
                                 $pc + 32'd4;
    $pc[31:0] = >>1$next_pc;
 
@@ -105,6 +107,7 @@
    $srai_rslt[63:0] = $sext_src1 >> $imm[4:0];
 
    $result[31:0] = $is_addi ? $src1_value[31:0] + $imm :
+                   $is_load ? $src1_value[31:0] + $imm :
                    $is_add ? $src1_value[31:0] + $src2_value[31:0] :
                    $is_lui  ? {$imm[31:12], 12'b0} :
                    $is_auipc  ? $pc + $imm :
@@ -143,14 +146,19 @@
                                                 1'b0;
    $br_tgt_pc[31:0] = $pc + $imm;
 
+   //JUMP
+   $jalr_tgt_pc[31:0] = $src1_value + $imm;
+
+   //DMEM & LD_DATA
+
+
    // Assert these to end simulation (before Makerchip cycle limit).
    m4+tb()
    *failed = *cyc_cnt > M4_MAX_CYC;
 
    //REGISTER FILE READ/WRITE MACRO, SPECIFIES READ AND WRITE SIGNALS
-   m4+rf(32, 32, $reset, $rd_valid&&($rd!=5'b0), $rd, $result, $rs1_valid, $rs1, $src1_value, $rs2_valid, $rs2, $src2_value)
-   //m4+rf(32, 32, $reset, $wr_en, $wr_index[4:0], $wr_data[31:0], $rd1_en, $rd1_index[4:0], $rd1_data, $rd2_en, $rd2_index[4:0], $rd2_data)
-   //m4+dmem(32, 32, $reset, $addr[4:0], $wr_en, $wr_data[31:0], $rd_en, $rd_data)
+   m4+rf(32, 32, $reset, $rd_valid&&($rd!=5'b0), $rd, $is_load ? $ld_data : $result, $rs1_valid, $rs1, $src1_value, $rs2_valid, $rs2, $src2_value)
+   m4+dmem(32, 32, $reset, $result[6:2], $is_s_instr, $src2_value, $is_load, $ld_data)
    m4+cpu_viz()
 \SV
    endmodule
