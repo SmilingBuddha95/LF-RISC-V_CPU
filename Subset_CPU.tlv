@@ -20,7 +20,7 @@
    //PC LOGIC
    $next_pc[31:0] = $reset ? 32'b0 :
                     $taken_br ? $br_tgt_pc :
-                                   $pc + 32'd4;
+                                $pc + 32'd4;
    $pc[31:0] = >>1$next_pc;
 
    //INSTRUCTION MEMORY MACRO
@@ -83,15 +83,15 @@
    $is_slli = $dec_bits == 11'b0_001_0010011;
    $is_srli = $dec_bits == 11'b0_101_0010011;
    $is_srai = $dec_bits == 11'b1_101_0010011;
-   $is_sub = $dec_bits == 11'b1_000_0010011;
-   $is_sll = $dec_bits == 11'b0_001_0010011;
-   $is_slt = $dec_bits == 11'b0_010_0010011;
-   $is_sltu = $dec_bits == 11'b0_011_0010011;
-   $is_xor = $dec_bits == 11'b0_100_0010011;
-   $is_srl = $dec_bits == 11'b0_101_0010011;
-   $is_sra = $dec_bits == 11'b1_101_0010011;
-   $is_or = $dec_bits == 11'b0_110_0010011;
-   $is_and = $dec_bits == 11'b0_111_0010011;
+   $is_sub = $dec_bits == 11'b1_000_0110011;
+   $is_sll = $dec_bits == 11'b0_001_0110011;
+   $is_slt = $dec_bits == 11'b0_010_0110011;
+   $is_sltu = $dec_bits == 11'b0_011_0110011;
+   $is_xor = $dec_bits == 11'b0_100_0110011;
+   $is_srl = $dec_bits == 11'b0_101_0110011;
+   $is_sra = $dec_bits == 11'b1_101_0110011;
+   $is_or = $dec_bits == 11'b0_110_0110011;
+   $is_and = $dec_bits == 11'b0_111_0110011;
 
    $is_load = $opcode == 7'b0000011;
 
@@ -106,29 +106,33 @@
 
    $result[31:0] = $is_addi ? $src1_value[31:0] + $imm :
                    $is_add ? $src1_value[31:0] + $src2_value[31:0] :
-                   $is_lui  ? $
-                   $is_auipc  ?
-                   $is_jal  ?
-                   $is_jalr  ?
-                   $is_slti  ?
-                   $is_sltiu  ?
-                   $is_xori  ?
-                   $is_ori  ?
-                   $is_andi  ?
-                   $is_slli  ?
-                   $is_srli  ?
-                   $is_srai  ?
-                   $is_sub  ?
-                   $is_sll  ?
-                   $is_slt  ?
-                   $is_sltu  ?
-                   $is_xor  ?
-                   $is_srl  ?
-                   $is_sra  ?
-                   $is_or  ?
-                   $is_and  ?
+                   $is_lui  ? {$imm[31:12], 12'b0} :
+                   $is_auipc  ? $pc + $imm :
+                   $is_jal  ? $pc + 32'd4 :
+                   $is_jalr  ? $pc + 32'd4 :
+                   $is_slti  ? ( ($src1_value[31] == $imm[31]) ?
+                                    $sltiu_rslt :
+                                    {31'b0, $src1_value[31]} ) :
+                   $is_sltiu  ? $sltiu_rslt[31:0] :
+                   $is_xori  ?  $src1_value ^ $imm :
+                   $is_ori  ? $src1_value | $imm :
+                   $is_andi  ? $src1_value[31:0] & $imm :
+                   $is_slli  ? $src1_value[31:0] << $imm[5:0] :
+                   $is_srli  ? $src1_value[31:0] >> $imm[5:0] :
+                   $is_srai  ? $srai_rslt[31:0] :
+                   $is_sub  ? $src1_value - $src2_value :
+                   $is_sll  ? $src1_value << $src2_value[4:0] :
+                   $is_slt  ? ( ($src1_value[31] == $src2_value[31]) ?
+                                    $sltu_rslt :
+                                    {31'b0, $src1_value[31]} ) :
+                   $is_sltu ? $sltu_rslt :
+                   $is_xor ? $src1_value ^ $src2_value :
+                   $is_srl ? $src1_value >> $src2_value[4:0] :
+                   $is_sra ? $sra_rslt[31:0] :
+                   $is_or ? $src1_value | $src2_value :
+                   $is_and ? $src1_value & $src2_value :
+                                                  32'b0;
 
-                                                              32'b0;
    //BRANCH LOGIC
    $taken_br = $is_beq ? $src1_value == $src2_value :
                $is_bne ? $src1_value !=$src2_value :
@@ -136,8 +140,7 @@
                $is_bge ? ($src1_value >= $src2_value) ^ ($src1_value[31] != $src2_value[31]) :
                $is_bltu ? $src1_value < $src2_value :
                $is_bgeu ? $src1_value >= $src2_value:
-
-                                                 1'b0;
+                                                1'b0;
    $br_tgt_pc[31:0] = $pc + $imm;
 
    // Assert these to end simulation (before Makerchip cycle limit).
