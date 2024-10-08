@@ -1,4 +1,3 @@
-LF-RISC-V CPU Project - README
 # LF-RISC-V CPU
 This repository contains the full implementation of a RISC-V CPU core, developed as part of the Linux Foundation's course on designing RISC-V architecture. The project is divided into several stages, each addressing different aspects of CPU design, from conceptual block diagrams to functional tests of the instruction set.
 ## Project Overview
