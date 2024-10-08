@@ -17,7 +17,7 @@ The testing framework relies on a combination of Verilog testbenches and simulat
 ## Installation
 1. Clone this repository: ```bash
 git clone https://github.com/SmilingBuddha95/LF-RISC-V_CPU.git cd LF-RISC-V_CPU
-```
+
 2. Ensure you have a compatible Verilog simulator like ModelSim or Icarus Verilog installed. 3. Run the simulation files in the `test/` folder to validate the design:
 ```bash
 iverilog -o cpu_sim test/cpu_tb.v vvp cpu_sim
